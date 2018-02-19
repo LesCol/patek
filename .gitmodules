@@ -1,6 +1,6 @@
 [submodule "lib/Discord.Net"]
 	path = lib/Discord.Net
 	url = https://github.com/RogueException/Discord.Net
-[submodule "lib\\Discord.Addons.MicrosoftLogging"]
-	path = lib\\Discord.Addons.MicrosoftLogging
+[submodule "lib/Discord.Addons.MicrosoftLogging"]
+	path = lib/Discord.Addons.MicrosoftLogging
 	url = https://github.com/foxbot/Discord.Addons.MicrosoftLogging
