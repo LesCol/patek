@@ -14,6 +14,7 @@ namespace Patek.Services
         private readonly LiteDatabase _database;
         private readonly ILogger _logger;
 
+        public Optional<ModuleInfo> Module => module;
         // TODO: C#8 Nullable
         private Optional<ModuleInfo> module;
 

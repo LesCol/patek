@@ -9,6 +9,7 @@ using Discord.Commands;
 
 namespace Patek.Modules
 {
+    [Name("Bot Information")]
     public class InfoModule : PatekModuleBase
     {
         public InfoModule(IOptions<Filter> filter)
@@ -19,6 +20,8 @@ namespace Patek.Modules
 
         [Command("info")]
         [Alias("about", "whoami", "owner")]
+        [Name("info")]
+        [Summary("Get bot info")]
         public async Task InfoAsync()
         {
             var app = await Context.Client.GetApplicationInfoAsync();
@@ -41,6 +44,8 @@ namespace Patek.Modules
 
         [Command("debug")]
         [RequireElevatedActor]
+        [Name("debug*")]
+        [Summary("Get bot debug info")]
         public async Task DebugAsync()
         {
             var embed = new EmbedBuilder()

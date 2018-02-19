@@ -10,6 +10,7 @@ using LiteDB;
 
 namespace Patek.Modules
 {
+    [Name("Tag Management")]
     public class TagModule : PatekModuleBase
     {
         public LiteDatabase Database { get; set; }
@@ -24,6 +25,8 @@ namespace Patek.Modules
 
         [Command("tag create")]
         [RequireElevatedActor]
+        [Name("tag create* <name> <text>")]
+        [Summary("Add a tag")]
         public async Task CreateAsync(string name, [Remainder] string content)
         {
             var tag = new Tag(name, content, Context.User);
@@ -35,6 +38,8 @@ namespace Patek.Modules
         [Command("tag set name")]
         [Alias("tag setname", "tag update name", "tag name")]
         [RequireElevatedActor]
+        [Name("tag name* <name> <new>")]
+        [Summary("Change a tag's name")]
         public async Task SetNameAsync(string before, string after)
         {
             var tags = Database.GetCollection<Tag>();
@@ -57,6 +62,8 @@ namespace Patek.Modules
         [Command("tag set content")]
         [Alias("tag set text", "tag update text", "tag text", "tag content")]
         [RequireElevatedActor]
+        [Name("tag text* <name> <text>")]
+        [Summary("Change a tag's content")]
         public async Task SetContentAsync(string name, [Remainder] string content)
         {
             var tags = Database.GetCollection<Tag>();
@@ -78,6 +85,8 @@ namespace Patek.Modules
 
         [Command("tag get content")]
         [Alias("tag raw", "tag content")]
+        [Name("tag raw <name>")]
+        [Summary("Get a tag's raw content")]
         public async Task GetRawContentAsync(string name)
         {
             var tags = Database.GetCollection<Tag>();
@@ -93,11 +102,15 @@ namespace Patek.Modules
 
         [Command("tag delete")]
         [RequireElevatedActor]
+        [Name("tag delete* <name>")]
+        [Summary("Pretend to delete a tag")]
         public Task DeleteAsync([Remainder] string name)
             => ReplyAsync($"Are you sure you want to do this? If so, use {_options.Prefix}tag destroy {name}");
 
         [Command("tag destroy")]
         [RequireElevatedActor]
+        [Name("tag destroy* <name>")]
+        [Summary("Actually delete a tag")]
         public async Task DestroyAsync(string name)
         {
             var tags = Database.GetCollection<Tag>();
@@ -114,6 +127,8 @@ namespace Patek.Modules
 
         [Command("tag list")]
         [Alias("tags")]
+        [Name("tags")]
+        [Summary("List the tags")]
         public async Task ListAsync()
         {
             var tags = Database.GetCollection<Tag>().FindAll();
@@ -122,6 +137,8 @@ namespace Patek.Modules
 
         [Command("tag info")]
         [Alias("tag owner", "tag whois", "tag about")]
+        [Name("tag info name")]
+        [Summary("Get info about a tag")]
         public async Task InfoAsync(string name)
         {
             var tag = Database.GetCollection<Tag>().FindOne(t => t.Name == name);
