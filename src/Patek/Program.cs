@@ -31,6 +31,7 @@ namespace Patek
             var services = ConfigureServices();
             await services.GetRequiredService<CommandHandlingService>().InitializeAsync(services);
             await services.GetRequiredService<TagService>().BuildTagsAsync();
+            _ = services.GetRequiredService<GitHubService>();
 
             var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("discord");
             _client.UseMicrosoftLogging(logger);
@@ -59,6 +60,7 @@ namespace Patek
                 // Extra
                 .AddSingleton(new LiteDatabase($"{GetConfigurationRoot()}/patek.db"))
                 .AddSingleton<TagService>()
+                .AddSingleton<GitHubService>()
                 .BuildServiceProvider();
         }
 
