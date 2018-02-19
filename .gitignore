@@ -294,7 +294,4 @@ __pycache__/
 # End of https://www.gitignore.io/api/visualstudio
 config\.json
 
-src/Patek/Migrations/
-src/Patek.Data/Migrations/
-
-filter\.json
+*.db

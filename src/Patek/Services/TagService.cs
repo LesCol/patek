@@ -1,11 +1,9 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Discord.Commands;
-using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 using Discord;
+using Discord.Commands;
+using LiteDB;
 using Patek.Data;
 
 namespace Patek.Services
@@ -13,71 +11,42 @@ namespace Patek.Services
     public class TagService
     {
         private readonly CommandService _commands;
-        private readonly DiscordSocketClient _discord;
-        private IServiceProvider _services;
-        private ModuleInfo module;
+        private readonly LiteDatabase _database;
+        private readonly ILogger _logger;
 
-        public TagService(CommandService commands, DiscordSocketClient discord)
+        // TODO: C#8 Nullable
+        private Optional<ModuleInfo> module;
+
+        public TagService(CommandService commands, LiteDatabase database, ILoggerFactory loggerFactory)
         {
             _commands = commands;
-            _discord = discord;
-        }
-        public async Task InitializeAsync(IServiceProvider services)
-        {
-            _services = services;
-            await BuildCommandsAsync();
+            _database = database;
+            _logger = loggerFactory.CreateLogger("tags");
+
+            module = new Optional<ModuleInfo>();
         }
 
-        public TagController GetTag(PatekContext context, string name)
+        public async Task BuildTagsAsync()
         {
-            var tag = context.Tags
-                .SingleOrDefault(t => t.Name == name);
-            return new TagController(context, _discord, tag);
-        }
-        public TagController CreateTag(PatekContext context, string name, string content, IUser author, uint color)
-        {
-            var tag = new Tag
+            if (module.IsSpecified)
+                await _commands.RemoveModuleAsync(module.Value);
+
+            var tags = _database.GetCollection<Tag>().FindAll();
+
+            module = await _commands.CreateModuleAsync("", module =>
             {
-                Name = name,
-                Content = content,
-                OwnerId = author.Id,
-                Color = color
-            };
-            context.Tags.Add(tag);
-            var controller = new TagController(context, _discord, tag);
-            controller.Create(author);
-            return controller;
-        }
-        
-        public async Task BuildCommandsAsync()
-        {
-            if (module != null)
-                await _commands.RemoveModuleAsync(module);
-
-            using (var context = _services.GetService<PatekContext>())
-            {
-                var tags = context.Tags.AsNoTracking();
-
-                module = await _commands.CreateModuleAsync("", m =>
+                foreach (var tag in tags)
                 {
-                    foreach (var tag in tags)
+                    module.AddCommand(tag.Name, (context, @params, provider, command) =>
                     {
-                        m.AddCommand(tag.Name, async (ctx, _, provider, _1) =>
-                        {
-                            using (var db = provider.GetService<PatekContext>())
-                            {
-                                var controller = GetTag(db, tag.Name);
-                                var embed = controller.GetEmbed();
+                        return context.Channel.SendMessageAsync(
+                            $"{tag.Name}: {tag.Content}");
+                    },
+                    command => {});
+                }
+            });
 
-                                await ctx.Channel.SendMessageAsync("", embed: embed);
-
-                                controller.Use(ctx.User);
-                                await db.SaveChangesAsync();
-                            }
-                        }, command => { });
-                    }
-                });
-            }
+            _logger.LogInformation("Built {} tags succesfully.", tags.Count());
         }
     }
 }

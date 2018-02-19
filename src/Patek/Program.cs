@@ -1,15 +1,17 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Discord;
+using Discord.Addons.MicrosoftLogging;
 using Discord.Commands;
 using Discord.WebSocket;
+using LiteDB;
 using Patek.Services;
-using Patek.Data;
-using System.Linq;
 
 namespace Patek
 {
@@ -27,11 +29,15 @@ namespace Patek
             _config = BuildConfig();
 
             var services = ConfigureServices();
-            services.GetRequiredService<LogService>();
             await services.GetRequiredService<CommandHandlingService>().InitializeAsync(services);
-            await services.GetRequiredService<TagService>().InitializeAsync(services);
+            await services.GetRequiredService<TagService>().BuildTagsAsync();
 
-            await _client.LoginAsync(TokenType.Bot, _config["token"]);
+            var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("discord");
+            _client.UseMicrosoftLogging(logger);
+
+            var options = services.GetRequiredService<IOptions<Options>>().Value;
+
+            await _client.LoginAsync(TokenType.Bot, options.Token);
             await _client.StartAsync();
 
             await Task.Delay(-1);
@@ -45,34 +51,31 @@ namespace Patek
                 .AddSingleton<CommandService>()
                 .AddSingleton<CommandHandlingService>()
                 // Logging
-                .AddLogging()
-                .AddSingleton<LogService>()
-                // Extra
+                .AddLogging(x => x.AddConsole())
+                // Configuration
                 .AddSingleton(_config)
-                .AddDbContext<PatekContext>(options =>
-                {
-                    options.UseNpgsql(_config["db"]);
-                }, ServiceLifetime.Transient)
+                .Configure<Options>(_config)
+                .Configure<Filter>(_config)
+                // Extra
+                .AddSingleton(new LiteDatabase($"{GetConfigurationRoot()}/patek.db"))
                 .AddSingleton<TagService>()
-                .AddSingleton<FilterService>()
                 .BuildServiceProvider();
         }
 
         private IConfiguration BuildConfig()
         {
             return new ConfigurationBuilder()
-                .SetBasePath(GetConfigRoot())
+                .SetBasePath(GetConfigurationRoot())
                 .AddJsonFile("config.json")
+                .AddJsonFile("filter.json", true)
                 .Build();
         }
 
-        public static string GetConfigRoot()
+        private string GetConfigurationRoot()
         {
-            // Get whether the app is being launched from / (deployed) or /src/Patek (debug)
-
             var cwd = Directory.GetCurrentDirectory();
-            var sln = Directory.GetFiles(cwd).Any(f => f.Contains("Patek.sln"));
-            return sln ? cwd : Path.Combine(cwd, "../..");
+            var sln = Directory.GetFiles(cwd).Any(f => f.Contains(".sln"));
+            return sln ? cwd : Path.Combine(cwd, "..", "..");
         }
     }
 }
